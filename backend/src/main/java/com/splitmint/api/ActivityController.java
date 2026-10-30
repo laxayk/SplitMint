@@ -22,17 +22,23 @@ public class ActivityController {
     @GetMapping("/api/groups/{groupId}/activity")
     public List<Dto.ActivityItem> feed(@PathVariable UUID groupId) {
         UUID me = CurrentUser.id();
-        groupService.requireMembership(groupId, me);
+        var group = groupService.requireMembership(groupId, me);
+        String currency = group.getCurrency();
         List<Dto.ActivityItem> items = new ArrayList<>();
         for (var e : expenses.findByGroupIdOrderByCreatedAtDesc(groupId)) {
             items.add(new Dto.ActivityItem("expense", e.getId(),
-                    e.getTitle() + " · " + e.getAmountMinor() + " minor units", e.getCreatedAt().toString()));
+                    e.getTitle() + " · " + money(e.getAmountMinor(), currency), e.getCreatedAt().toString()));
         }
         for (var p : payments.findByGroupIdOrderByCreatedAtDesc(groupId)) {
+            String status = p.getStatus().name().charAt(0) + p.getStatus().name().substring(1).toLowerCase(Locale.ROOT);
             items.add(new Dto.ActivityItem("payment", p.getId(),
-                    "Payment " + p.getAmountMinor() + " (" + p.getStatus() + ")", p.getCreatedAt().toString()));
+                    "Payment of " + money(p.getAmountMinor(), currency) + " (" + status + ")", p.getCreatedAt().toString()));
         }
         items.sort(Comparator.comparing(Dto.ActivityItem::at).reversed());
         return items;
+    }
+
+    private static String money(long minor, String currency) {
+        return currency + " " + String.format(Locale.ROOT, "%,.2f", minor / 100.0);
     }
 }
