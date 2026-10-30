@@ -63,7 +63,7 @@ cd app && npm test                 # split preview + money parsing
 Every request goes through the same path: JWT filter, controller, service, repository, PostgreSQL.
 
 ```mermaid
-flowchart LR
+flowchart TD
     App["Expo app<br/>api.ts"] -->|"HTTPS + Bearer JWT"| Filter["JwtAuthFilter<br/>reads token, sets current user"]
     Filter --> Ctl["Controllers<br/>Auth, Group, Expense, Payment, Activity"]
     Ctl --> Svc["Services<br/>GroupService, SplitService,<br/>BalanceService, SettlementService"]
@@ -131,7 +131,7 @@ flowchart TD
 ```
 
 ```mermaid
-flowchart LR
+flowchart TD
     Screen["Screen"] --> Api["api.ts<br/>adds Bearer token, request id"]
     Api -->|"fetch"| Backend["Spring Boot API"]
     Api --> Store["Secure Store<br/>(token, user id)"]
