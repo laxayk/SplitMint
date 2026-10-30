@@ -2,18 +2,20 @@ import React, { useState } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import { BackHeader } from '../components/BackHeader';
 import { api, newRequestId } from '../api';
-import { ErrorBox, Field, PrimaryButton, Screen, Title } from '../components/ui';
+import { ErrorBox, Field, PrimaryButton, Screen, Slider, Title } from '../components/ui';
 import { useTheme } from '../theme';
 import { parseMoney } from '../format';
 
 interface Member { userId: string; displayName: string }
 
 export default function RecordPaymentScreen({ route, navigation }: any) {
-  const { groupId, currency, members } = route.params as { groupId: string; currency: string; members: Member[] };
+  const { groupId, currency, members, transfers } = route.params as { groupId: string; currency: string; members: Member[]; transfers?: { amountMinor: number }[] };
+  const sliderMax = Math.max(1000, ...(transfers ?? []).map((t) => t.amountMinor));
   const { colors } = useTheme();
   const [fromUser, setFromUser] = useState(members[0]?.userId ?? '');
   const [toUser, setToUser] = useState(members[1]?.userId ?? '');
   const [amount, setAmount] = useState('');
+  const amountMinorNow = parseMoney(amount) ?? 0;
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [requestId] = useState(newRequestId());
@@ -63,6 +65,8 @@ export default function RecordPaymentScreen({ route, navigation }: any) {
       {picker('From (who paid)', fromUser, setFromUser)}
       {picker('To (who received)', toUser, setToUser)}
       <Field label={`Amount (${currency})`} value={amount} onChange={setAmount} placeholder="0.00" keyboardType="decimal-pad" />
+      <Text style={{ color: colors.textMuted, fontWeight: '600', marginBottom: 2 }}>Or drag to set the amount</Text>
+      <Slider value={Math.min(amountMinorNow, sliderMax)} min={0} max={sliderMax} step={Math.max(100, Math.round(sliderMax / 200 / 100) * 100)} onChange={(v) => setAmount((v / 100).toFixed(2))} />
       <Text style={{ color: colors.textMuted, marginBottom: 8 }}>
         The other person confirms it before it changes balances. This only records the payment; no money moves here.
       </Text>

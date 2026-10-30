@@ -1,8 +1,8 @@
 import React, { useCallback, useState } from 'react';
-import { FlatList, RefreshControl, Text, TouchableOpacity } from 'react-native';
+import { FlatList, RefreshControl, Text, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { api } from '../api';
-import { Card, CenteredLoading, EmptyState, ErrorBox, Screen, Title } from '../components/ui';
+import { Avatar, CenteredLoading, EmptyState, ErrorBox, FadeIn, Screen } from '../components/ui';
 import { useTheme } from '../theme';
 
 interface Group {
@@ -31,7 +31,10 @@ export default function GroupsScreen({ navigation }: any) {
 
   return (
     <Screen>
-      <Title>Your groups</Title>
+      <View style={{ marginBottom: 14, marginTop: 6 }}>
+        <Text style={{ color: colors.textMuted, fontSize: 12, fontWeight: '700', letterSpacing: 1.4 }}>SPLITMINT</Text>
+        <Text style={{ color: colors.text, fontSize: 32, fontWeight: '800', letterSpacing: -1 }}>Your groups</Text>
+      </View>
       {error ? <ErrorBox message={error} /> : null}
       {groups === null ? (
         <CenteredLoading />
@@ -42,23 +45,42 @@ export default function GroupsScreen({ navigation }: any) {
           data={groups}
           keyExtractor={(g) => g.id}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={async () => { setRefreshing(true); await load(); setRefreshing(false); }} />}
-          renderItem={({ item }) => (
-            <TouchableOpacity onPress={() => navigation.navigate('GroupDetail', { groupId: item.id, name: item.name, currency: item.currency })}>
-              <Card>
-                <Text style={{ fontSize: 17, fontWeight: '700', color: colors.text }}>{item.name}</Text>
-                <Text style={{ color: colors.textMuted, marginTop: 4 }}>
-                  {item.members.length} member{item.members.length === 1 ? '' : 's'} · {item.currency}
-                </Text>
-              </Card>
-            </TouchableOpacity>
+          renderItem={({ item, index }) => (
+            <FadeIn delay={index * 50}>
+              <TouchableOpacity
+                activeOpacity={0.85}
+                onPress={() => navigation.navigate('GroupDetail', { groupId: item.id, name: item.name, currency: item.currency })}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: colors.surface, borderRadius: 14, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: colors.border }}
+              >
+                <View style={{ width: 48, height: 48, borderRadius: 12, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center' }}>
+                  <Text style={{ color: colors.accentText, fontWeight: '800', fontSize: 20 }}>{item.name[0]?.toUpperCase()}</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 18, fontWeight: '800', color: colors.text }}>{item.name}</Text>
+                  <Text style={{ color: colors.textMuted, marginTop: 3 }}>
+                    {item.members.length} member{item.members.length === 1 ? '' : 's'} · {item.currency}
+                  </Text>
+                </View>
+                <View style={{ flexDirection: 'row' }}>
+                  {item.members.slice(0, 3).map((m, i) => (
+                    <View key={m.userId} style={{ marginLeft: i === 0 ? 0 : -10, borderWidth: 2, borderColor: colors.surface, borderRadius: 18 }}>
+                      <Avatar name={m.displayName} size={28} />
+                    </View>
+                  ))}
+                </View>
+              </TouchableOpacity>
+            </FadeIn>
           )}
         />
       )}
       <TouchableOpacity
-        style={{ position: 'absolute', right: 24, bottom: 24, width: 56, height: 56, borderRadius: 28, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center' }}
+        testID="fab-add"
+        accessibilityLabel="New group"
+        style={{ position: 'absolute', left: 18, right: 18, bottom: 18, height: 54, borderRadius: 14, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 }}
         onPress={() => navigation.navigate('NewGroup')}
       >
-        <Text style={{ color: colors.accentText, fontSize: 28, marginTop: -2 }}>+</Text>
+        <Text style={{ color: colors.accentText, fontSize: 22, marginTop: -2 }}>+</Text>
+        <Text style={{ color: colors.accentText, fontWeight: '800', fontSize: 16 }}>New group</Text>
       </TouchableOpacity>
     </Screen>
   );

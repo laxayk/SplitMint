@@ -19,31 +19,31 @@ export interface Palette {
 }
 
 export const lightPalette: Palette = {
-  bg: '#F4F5FA',
+  bg: '#F1F6F3',
   surface: '#FFFFFF',
-  surfaceAlt: '#ECEDF5',
-  text: '#1B1D29',
-  textMuted: '#6B6F82',
-  accent: '#4A54C4',
+  surfaceAlt: '#E3EEE9',
+  text: '#0B1F1A',
+  textMuted: '#566B64',
+  accent: '#0F766E',
   accentText: '#FFFFFF',
-  positive: '#2E9E5B',
-  negative: '#C44A4A',
-  border: '#DDE0EC',
-  danger: '#C44A4A',
+  positive: '#0B9B68',
+  negative: '#D6443A',
+  border: '#D3E2DB',
+  danger: '#D6443A',
 };
 
 export const darkPalette: Palette = {
-  bg: '#14161F',
-  surface: '#1E2130',
-  surfaceAlt: '#272B3D',
-  text: '#F2F3F8',
-  textMuted: '#9BA0B5',
-  accent: '#8F98FF',
-  accentText: '#14161F',
-  positive: '#4CC47C',
-  negative: '#E07A7A',
-  border: '#31364B',
-  danger: '#E07A7A',
+  bg: '#09130F',
+  surface: '#10201B',
+  surfaceAlt: '#1A2E28',
+  text: '#E8F5F0',
+  textMuted: '#88A59B',
+  accent: '#2DD4BF',
+  accentText: '#04201B',
+  positive: '#34D399',
+  negative: '#F87171',
+  border: '#223D36',
+  danger: '#F87171',
 };
 
 interface ThemeState {

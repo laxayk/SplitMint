@@ -13,21 +13,27 @@ import NewGroupScreen from './src/screens/NewGroupScreen';
 import GroupDetailScreen from './src/screens/GroupDetailScreen';
 import AddExpenseScreen from './src/screens/AddExpenseScreen';
 import RecordPaymentScreen from './src/screens/RecordPaymentScreen';
+import Splash from './src/components/Splash';
 import SettingsScreen from './src/screens/SettingsScreen';
 
 function TabIcon({ name, color }: { name: string; color: string }) {
   const icons: Record<string, string> = { Groups: '\u2261', Settings: '\u2699' };
-  return <Text style={{ fontSize: 18, color }}>{icons[name] ?? '\u25CF'}</Text>;
+  return <Text style={{ fontSize: 18, lineHeight: 22, color }}>{icons[name] ?? '\u25CF'}</Text>;
 }
 
 const Stack = createNativeStackNavigator();
 const Tabs = createBottomTabNavigator();
 
 function MainTabs({ onSignedOut }: { onSignedOut: () => void }) {
+  const { colors } = useTheme();
   return (
     <Tabs.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
+        tabBarActiveTintColor: colors.accent,
+        tabBarInactiveTintColor: colors.textMuted,
+        tabBarStyle: { backgroundColor: colors.surface, borderTopColor: colors.border, height: 84, paddingTop: 8, paddingBottom: 14 },
+        tabBarLabelStyle: { fontSize: 12, fontWeight: '700', lineHeight: 16 },
         tabBarIcon: ({ color }) => <TabIcon name={route.name} color={color} />,
       })}
     >
@@ -42,12 +48,13 @@ function MainTabs({ onSignedOut }: { onSignedOut: () => void }) {
 function Root() {
   const { colors, resolved } = useTheme();
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
+  const [splashDone, setSplashDone] = useState(false);
 
   useEffect(() => {
     loadToken().then((t) => setSignedIn(t !== null));
   }, []);
 
-  if (signedIn === null) return <Screen><CenteredLoading /></Screen>;
+  if (!splashDone || signedIn === null) return <Splash onDone={() => setSplashDone(true)} />;
 
   const navTheme = (resolved === 'dark' ? DarkTheme : DefaultTheme);
   navTheme.colors.background = colors.bg;

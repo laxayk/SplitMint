@@ -3,7 +3,7 @@ import { RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-
 import { useFocusEffect } from '@react-navigation/native';
 import { BackHeader } from '../components/BackHeader';
 import { api, loadUserId } from '../api';
-import { Card, CenteredLoading, ErrorBox, Field, PrimaryButton, Screen } from '../components/ui';
+import { Avatar, Card, CenteredLoading, ErrorBox, FadeIn, Field, MONO, PrimaryButton, Row, Screen, SectionHeader } from '../components/ui';
 import { useTheme } from '../theme';
 import { formatMoney } from '../format';
 
@@ -97,128 +97,185 @@ export default function GroupDetailScreen({ route, navigation }: any) {
 
   if (balances === null && !error) return <Screen><CenteredLoading /></Screen>;
 
+  const myNet = (balances ?? []).find((b) => b.userId === me)?.netMinor ?? 0;
+  const heroColor = myNet > 0 ? '#5EEAD4' : myNet < 0 ? '#FCA5A5' : '#E8F5F0';
+  const heroLabel = myNet > 0 ? 'You get back' : myNet < 0 ? 'You owe' : 'You are settled up';
+  const money = (n: number) => formatMoney(Math.abs(n), currency);
+
   return (
     <Screen>
       <BackHeader title={name} />
       {error ? <ErrorBox message={error} /> : null}
-      <ScrollView refreshControl={<RefreshControl refreshing={refreshing} onRefresh={async () => { setRefreshing(true); await load(); setRefreshing(false); }} />}>
-        <Card>
-          <Text style={{ fontWeight: '700', color: colors.text, marginBottom: 8 }}>Balances</Text>
-          {(balances ?? []).map((b) => (
-            <View key={b.userId} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 4 }}>
-              <Text style={{ color: colors.text }}>{nameOf(b.userId)}</Text>
-              <Text style={{ color: b.netMinor > 0 ? colors.positive : b.netMinor < 0 ? colors.negative : colors.textMuted, fontWeight: '600' }}>
-                {b.netMinor > 0 ? 'gets back ' : b.netMinor < 0 ? 'owes ' : ''}{formatMoney(Math.abs(b.netMinor), currency)}
-              </Text>
+      <ScrollView contentContainerStyle={{ paddingBottom: 110 }} showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={async () => { setRefreshing(true); await load(); setRefreshing(false); }} />}>
+        <FadeIn>
+          <View style={{ backgroundColor: '#06332E', borderRadius: 18, padding: 20, marginBottom: 18 }}>
+            <Text style={{ color: '#8FD9C8', fontSize: 12, fontWeight: '700', letterSpacing: 1.4 }}>{heroLabel.toUpperCase()}</Text>
+            <Text style={{ color: heroColor, fontSize: 40, fontWeight: '800', fontFamily: MONO, marginTop: 6, letterSpacing: -1 }}>{money(myNet)}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 14 }}>
+              {members.map((m, i) => (
+                <View key={m.userId} style={{ marginLeft: i === 0 ? 0 : -8, borderWidth: 2, borderColor: '#06332E', borderRadius: 20 }}>
+                  <Avatar name={m.displayName} size={30} />
+                </View>
+              ))}
+              <Text style={{ color: '#8FD9C8', marginLeft: 10 }}>{members.length} people · {currency}</Text>
             </View>
-          ))}
-        </Card>
+          </View>
+        </FadeIn>
 
-        {transfers.length > 0 ? (
-          <Card>
-            <Text style={{ fontWeight: '700', color: colors.text, marginBottom: 8 }}>Suggested settlements</Text>
-            {transfers.map((t, i) => (
-              <Text key={i} style={{ color: colors.text, paddingVertical: 2 }}>
-                {nameOf(t.fromUser)} pays {nameOf(t.toUser)} {formatMoney(t.amountMinor, currency)}
-              </Text>
+        <FadeIn delay={60}>
+          <SectionHeader>Balances</SectionHeader>
+          <Card flush>
+            {(balances ?? []).map((b, i, arr) => (
+              <Row key={b.userId} last={i === arr.length - 1}>
+                <Avatar name={nameOf(b.userId)} />
+                <Text style={{ color: colors.text, flex: 1, fontSize: 16, fontWeight: '600' }}>{nameOf(b.userId)}</Text>
+                <View style={{ alignItems: 'flex-end' }}>
+                  <Text style={{ color: b.netMinor > 0 ? colors.positive : b.netMinor < 0 ? colors.negative : colors.textMuted, fontWeight: '700', fontFamily: MONO, fontSize: 16 }}>
+                    {b.netMinor > 0 ? 'gets back ' : b.netMinor < 0 ? 'owes ' : ''}{money(b.netMinor)}
+                  </Text>
+                </View>
+              </Row>
             ))}
           </Card>
+        </FadeIn>
+
+        {transfers.length > 0 ? (
+          <FadeIn delay={100}>
+            <SectionHeader>Suggested settlements</SectionHeader>
+            <Card flush>
+              {transfers.map((t, i) => (
+                <Row key={i} last={i === transfers.length - 1}>
+                  <Avatar name={nameOf(t.fromUser)} size={28} />
+                  <Text style={{ color: colors.textMuted, fontSize: 18 }}>→</Text>
+                  <Avatar name={nameOf(t.toUser)} size={28} />
+                  <Text style={{ color: colors.text, flex: 1 }}>
+                    {nameOf(t.fromUser)} pays {nameOf(t.toUser)} {formatMoney(t.amountMinor, currency)}
+                  </Text>
+                </Row>
+              ))}
+            </Card>
+          </FadeIn>
         ) : null}
 
         {payments.length > 0 ? (
-          <Card>
-            <Text style={{ fontWeight: '700', color: colors.text, marginBottom: 8 }}>Payments</Text>
-            {payments.map((p) => {
-              const canConfirm = p.status !== 'CONFIRMED' && me !== null && p.recordedBy !== me && (p.fromUser === me || p.toUser === me);
-              return (
-                <View key={p.id} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 4, gap: 8 }}>
-                  <Text style={{ color: colors.text, flex: 1 }}>
-                    {nameOf(p.fromUser)} → {nameOf(p.toUser)} {formatMoney(p.amountMinor, currency)}
-                  </Text>
-                  {canConfirm ? (
-                    <TouchableOpacity onPress={() => confirm(p)} hitSlop={8}>
-                      <Text style={{ color: colors.accent, fontWeight: '700' }}>Confirm</Text>
-                    </TouchableOpacity>
-                  ) : (
-                    <Text style={{ color: p.status === 'CONFIRMED' ? colors.positive : colors.textMuted, fontWeight: '600' }}>
-                      {p.status === 'CONFIRMED' ? 'Confirmed' : 'Pending'}
+          <FadeIn delay={120}>
+            <SectionHeader>Payments</SectionHeader>
+            <Card flush>
+              {payments.map((p, i) => {
+                const canConfirm = p.status !== 'CONFIRMED' && me !== null && p.recordedBy !== me && (p.fromUser === me || p.toUser === me);
+                return (
+                  <Row key={p.id} last={i === payments.length - 1}>
+                    <Text style={{ color: colors.text, flex: 1 }}>
+                      {nameOf(p.fromUser)} → {nameOf(p.toUser)} {formatMoney(p.amountMinor, currency)}
                     </Text>
-                  )}
-                </View>
-              );
-            })}
-          </Card>
+                    {canConfirm ? (
+                      <TouchableOpacity onPress={() => confirm(p)} hitSlop={8} style={{ backgroundColor: colors.accent, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 6 }}>
+                        <Text style={{ color: colors.accentText, fontWeight: '800' }}>Confirm</Text>
+                      </TouchableOpacity>
+                    ) : (
+                      <View style={{ backgroundColor: p.status === 'CONFIRMED' ? colors.positive + '22' : colors.surfaceAlt, borderRadius: 12, paddingHorizontal: 10, paddingVertical: 4 }}>
+                        <Text style={{ color: p.status === 'CONFIRMED' ? colors.positive : colors.textMuted, fontWeight: '700' }}>
+                          {p.status === 'CONFIRMED' ? 'Confirmed' : 'Pending'}
+                        </Text>
+                      </View>
+                    )}
+                  </Row>
+                );
+              })}
+            </Card>
+          </FadeIn>
         ) : null}
 
-        <Card>
-          <Text style={{ fontWeight: '700', color: colors.text, marginBottom: 8 }}>Expenses</Text>
-          {expenses.length === 0 ? (
-            <Text style={{ color: colors.textMuted }}>No expenses yet. Tap + to add the first one.</Text>
-          ) : (
-            expenses.map((e) => (
-              <View key={e.id} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 4, gap: 8 }}>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ color: colors.text }}>{e.title}</Text>
-                  <Text style={{ color: colors.textMuted, fontSize: 12 }}>{e.date} · paid by {nameOf(e.paidBy)}</Text>
-                </View>
-                <Text style={{ color: colors.textMuted }}>{formatMoney(e.amountMinor, currency)}</Text>
-                {me !== null && e.createdBy === me ? (
-                  <View style={{ flexDirection: 'row', gap: 12 }}>
-                    <TouchableOpacity onPress={() => navigation.navigate('AddExpense', { groupId, currency, members, existing: e })} hitSlop={8}>
-                      <Text style={{ color: colors.accent, fontWeight: '600' }}>Edit</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => deleteExpense(e)} hitSlop={8}>
-                      <Text style={{ color: colors.danger, fontWeight: '600' }}>Delete</Text>
-                    </TouchableOpacity>
+        <FadeIn delay={140}>
+          <SectionHeader>Expenses</SectionHeader>
+          <Card flush>
+            {expenses.length === 0 ? (
+              <Row last><Text style={{ color: colors.textMuted }}>No expenses yet. Tap + to add the first one.</Text></Row>
+            ) : (
+              expenses.map((e, i) => (
+                <Row key={e.id} last={i === expenses.length - 1}>
+                  <View style={{ width: 40, height: 40, borderRadius: 10, backgroundColor: colors.surfaceAlt, alignItems: 'center', justifyContent: 'center' }}>
+                    <Text style={{ fontSize: 18, color: colors.accent, fontWeight: '800' }}>{e.title[0]?.toUpperCase()}</Text>
                   </View>
-                ) : null}
-              </View>
-            ))
-          )}
-        </Card>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: colors.text, fontWeight: '700', fontSize: 16 }}>{e.title}</Text>
+                    <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 2 }}>{e.date} · paid by {nameOf(e.paidBy)}</Text>
+                    {me !== null && e.createdBy === me ? (
+                      <View style={{ flexDirection: 'row', gap: 16, marginTop: 6 }}>
+                        <TouchableOpacity onPress={() => navigation.navigate('AddExpense', { groupId, currency, members, existing: e })} hitSlop={8}>
+                          <Text style={{ color: colors.accent, fontWeight: '700' }}>Edit</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => deleteExpense(e)} hitSlop={8}>
+                          <Text style={{ color: colors.danger, fontWeight: '700' }}>Delete</Text>
+                        </TouchableOpacity>
+                      </View>
+                    ) : null}
+                  </View>
+                  <Text style={{ color: colors.text, fontFamily: MONO, fontWeight: '700', fontSize: 16 }}>{formatMoney(e.amountMinor, currency)}</Text>
+                </Row>
+              ))
+            )}
+          </Card>
+        </FadeIn>
 
-        <Card>
-          <Text style={{ fontWeight: '700', color: colors.text, marginBottom: 8 }}>Members</Text>
-          {members.map((m) => (
-            <Text key={m.userId} style={{ color: colors.text, paddingVertical: 2 }}>{m.displayName} · {m.email}</Text>
+        <SectionHeader>Members</SectionHeader>
+        <Card flush>
+          {members.map((m, i) => (
+            <Row key={m.userId} last={false}>
+              <Avatar name={m.displayName} />
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: colors.text, fontWeight: '700' }}>{m.displayName}</Text>
+                <Text style={{ color: colors.textMuted, fontSize: 12 }}>{m.email}</Text>
+              </View>
+            </Row>
           ))}
-          <View style={{ height: 8 }} />
-          <Field label="Add a member by email" value={memberEmail} onChange={setMemberEmail} placeholder="friend@example.com" keyboardType="email-address" error={memberMsg && memberMsg !== 'Added.' ? memberMsg : undefined} />
-          {memberMsg === 'Added.' ? <Text style={{ color: colors.positive, marginBottom: 8 }}>Added.</Text> : null}
-          <PrimaryButton title="Add member" onPress={addMember} />
-          <View style={{ height: 8 }} />
-          <TouchableOpacity onPress={leave} hitSlop={8}>
-            <Text style={{ color: colors.danger, fontWeight: '700' }}>Leave group</Text>
-          </TouchableOpacity>
+          <View style={{ padding: 16 }}>
+            <Field label="Add a member by email" value={memberEmail} onChange={setMemberEmail} placeholder="friend@example.com" keyboardType="email-address" error={memberMsg && memberMsg !== 'Added.' ? memberMsg : undefined} />
+            {memberMsg === 'Added.' ? <Text style={{ color: colors.positive, marginBottom: 8 }}>Added.</Text> : null}
+            <PrimaryButton title="Add member" onPress={addMember} />
+            <View style={{ height: 10 }} />
+            <TouchableOpacity onPress={leave} hitSlop={8}>
+              <Text style={{ color: colors.danger, fontWeight: '800' }}>Leave group</Text>
+            </TouchableOpacity>
+          </View>
         </Card>
 
         {activity.length > 0 ? (
-          <Card>
-            <Text style={{ fontWeight: '700', color: colors.text, marginBottom: 8 }}>Activity</Text>
-            {activity.map((a) => (
-              <View key={`${a.kind}-${a.id}`} style={{ paddingVertical: 3 }}>
-                <Text style={{ color: colors.text }}>{a.text}</Text>
-                <Text style={{ color: colors.textMuted, fontSize: 12 }}>{a.at.slice(0, 16).replace('T', ' ')}</Text>
-              </View>
-            ))}
-          </Card>
+          <>
+            <SectionHeader>Activity</SectionHeader>
+            <Card flush>
+              {activity.map((a, i) => (
+                <Row key={`${a.kind}-${a.id}`} last={i === activity.length - 1}>
+                  <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: colors.accent }} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: colors.text }}>{a.text}</Text>
+                    <Text style={{ color: colors.textMuted, fontSize: 12 }}>{a.at.slice(0, 16).replace('T', ' ')}</Text>
+                  </View>
+                </Row>
+              ))}
+            </Card>
+          </>
         ) : null}
 
-        <View style={{ height: 90 }} />
+        <View style={{ height: 110 }} />
       </ScrollView>
 
-      <View style={{ position: 'absolute', right: 24, bottom: 24, flexDirection: 'row', gap: 12 }}>
+      <View style={{ position: 'absolute', left: 18, right: 18, bottom: 20, flexDirection: 'row', gap: 12 }}>
         <TouchableOpacity
-          style={{ paddingHorizontal: 18, height: 48, borderRadius: 24, backgroundColor: colors.surfaceAlt, alignItems: 'center', justifyContent: 'center' }}
-          onPress={() => navigation.navigate('RecordPayment', { groupId, currency, members })}
+          testID="fab-pay"
+          style={{ flex: 1, height: 54, borderRadius: 14, backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.accent, alignItems: 'center', justifyContent: 'center' }}
+          onPress={() => navigation.navigate('RecordPayment', { groupId, currency, members, transfers })}
         >
-          <Text style={{ color: colors.text, fontWeight: '700' }}>Record payment</Text>
+          <Text style={{ color: colors.accent, fontWeight: '800', fontSize: 16 }}>Record payment</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center' }}
+          testID="fab-add"
+          accessibilityLabel="Add expense"
+          style={{ flex: 1, height: 54, borderRadius: 14, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 }}
           onPress={() => navigation.navigate('AddExpense', { groupId, currency, members })}
         >
-          <Text style={{ color: colors.accentText, fontSize: 28, marginTop: -2 }}>+</Text>
+          <Text style={{ color: colors.accentText, fontSize: 22, marginTop: -2 }}>+</Text>
+          <Text style={{ color: colors.accentText, fontWeight: '800', fontSize: 16 }}>Expense</Text>
         </TouchableOpacity>
       </View>
     </Screen>

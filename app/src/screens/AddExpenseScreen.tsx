@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { BackHeader } from '../components/BackHeader';
 import { api, newRequestId } from '../api';
-import { ErrorBox, Field, PrimaryButton, Screen, Title } from '../components/ui';
+import { ErrorBox, Field, PrimaryButton, Screen, Slider, Title } from '../components/ui';
 import { useTheme } from '../theme';
 import { formatMoney, parseMoney } from '../format';
 import { splitPreview, type SplitMode } from '../split';
@@ -166,7 +166,15 @@ export default function AddExpenseScreen({ route, navigation }: any) {
           {MODES.map((m) => (
             <TouchableOpacity
               key={m.key}
-              onPress={() => setMode(m.key)}
+              onPress={() => {
+                setMode(m.key);
+                if (m.key === 'PERCENT' && Object.keys(percent).length === 0 && sharedBy.length > 0) {
+                  const base = Math.floor((10000 / sharedBy.length)) / 100;
+                  const next: Record<string, string> = {};
+                  sharedBy.forEach((id, i) => { next[id] = String(i === sharedBy.length - 1 ? Math.round((100 - base * (sharedBy.length - 1)) * 100) / 100 : base); });
+                  setPercent(next);
+                }
+              }}
               style={{
                 paddingHorizontal: 16, paddingVertical: 8, borderRadius: 18,
                 backgroundColor: mode === m.key ? colors.accent : colors.surfaceAlt,
@@ -204,7 +212,8 @@ export default function AddExpenseScreen({ route, navigation }: any) {
         {mode === 'PERCENT' ? (
           <View style={{ marginBottom: 12 }}>
             {sharedBy.map((id) => (
-              <View key={id} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 12 }}>
+              <React.Fragment key={id}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 2, gap: 12 }}>
                 <Text style={{ flex: 1, color: colors.text }}>{memberName(id)}</Text>
                 <TextInput
                   style={{
@@ -219,6 +228,8 @@ export default function AddExpenseScreen({ route, navigation }: any) {
                 />
                 <Text style={{ color: colors.textMuted }}>%</Text>
               </View>
+              <Slider value={Math.min(100, parseFloat(percent[id] ?? '0') || 0)} min={0} max={100} step={1} onChange={(v) => setPercent((cur) => ({ ...cur, [id]: String(v) }))} />
+              </React.Fragment>
             ))}
             <Text style={{ color: Math.abs(percentSum - 100) < 0.0001 ? colors.positive : colors.textMuted }}>
               Total: {percentSum}% of 100%

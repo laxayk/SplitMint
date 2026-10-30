@@ -4,7 +4,7 @@
   <a href="demo/demo.mp4"><img src="demo/demo.gif" alt="SplitMint demo" width="300"></a>
 </p>
 
-Demo walkthrough: sign up, create a group, add a member, split expenses equally and exactly, record a payment, confirm it as the other person, and see balances return to zero. Click the animation to open the full video: [demo/demo.mp4](demo/demo.mp4).
+Demo walkthrough (Expo web build in a phone-sized window): splash, sign up, create a group, add a member, split expenses equally, by percent with sliders, and exactly, record a payment, confirm it as the other person, and see balances return to zero. Click the animation to open the full video: [demo/demo.mp4](demo/demo.mp4).
 
 Share expenses in a group and settle up. A React Native app (Expo, TypeScript) on a Spring Boot + PostgreSQL backend. Demo project with fake data; it records payments but never moves money.
 
