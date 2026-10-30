@@ -25,8 +25,8 @@ export default function AuthScreen({ onSignedIn }: Props) {
     setBusy(true);
     try {
       const body = mode === 'login' ? { email, password } : { email, password, displayName: name.trim() };
-      const res = await api<{ token: string }>(`/api/auth/${mode}`, { method: 'POST', body: JSON.stringify(body) });
-      await saveToken(res.token);
+      const res = await api<{ token: string; userId: string }>(`/api/auth/${mode}`, { method: 'POST', body: JSON.stringify(body) });
+      await saveToken(res.token, res.userId);
       onSignedIn();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Something went wrong');

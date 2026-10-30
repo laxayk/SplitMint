@@ -24,9 +24,15 @@ const API_URL: string =
   'http://localhost:8080';
 
 const TOKEN_KEY = 'splitmint.jwt';
+const USER_KEY = 'splitmint.userId';
 
-export async function saveToken(token: string) {
+export async function saveToken(token: string, userId?: string) {
   await store.set(TOKEN_KEY, token);
+  if (userId) await store.set(USER_KEY, userId);
+}
+
+export async function loadUserId() {
+  return store.get(USER_KEY);
 }
 
 export async function loadToken(): Promise<string | null> {
@@ -35,6 +41,7 @@ export async function loadToken(): Promise<string | null> {
 
 export async function clearToken() {
   await store.del(TOKEN_KEY);
+  await store.del(USER_KEY);
 }
 
 export class ApiError extends Error {

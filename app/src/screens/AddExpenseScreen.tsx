@@ -15,15 +15,26 @@ const MODES: { key: SplitMode; label: string }[] = [
   { key: 'PERCENT', label: '%' },
 ];
 
+interface ExistingExpense {
+  id: string; title: string; amountMinor: number; date: string; paidBy: string;
+  shares: { userId: string; shareMinor: number }[];
+}
+
 export default function AddExpenseScreen({ route, navigation }: any) {
-  const { groupId, currency, members } = route.params as { groupId: string; currency: string; members: Member[] };
+  const { groupId, currency, members, existing } = route.params as { groupId: string; currency: string; members: Member[]; existing?: ExistingExpense };
   const { colors } = useTheme();
-  const [title, setTitle] = useState('');
-  const [amount, setAmount] = useState('');
-  const [paidBy, setPaidBy] = useState(members[0]?.userId ?? '');
-  const [sharedBy, setSharedBy] = useState<string[]>(members.map((m) => m.userId));
-  const [mode, setMode] = useState<SplitMode>('EQUAL');
-  const [exact, setExact] = useState<Record<string, string>>({});
+  const [title, setTitle] = useState(existing?.title ?? '');
+  const [amount, setAmount] = useState(existing ? (existing.amountMinor / 100).toFixed(2) : '');
+  const [date, setDate] = useState(existing?.date ?? new Date().toISOString().slice(0, 10));
+  const [paidBy, setPaidBy] = useState(existing?.paidBy ?? members[0]?.userId ?? '');
+  const [sharedBy, setSharedBy] = useState<string[]>(existing ? existing.shares.map((sh) => sh.userId) : members.map((m) => m.userId));
+  const [mode, setMode] = useState<SplitMode>(existing ? 'EXACT' : 'EQUAL');
+  const [exact, setExact] = useState<Record<string, string>>(() => {
+    if (!existing) return {};
+    const out: Record<string, string> = {};
+    for (const sh of existing.shares) out[sh.userId] = (sh.shareMinor / 100).toFixed(2);
+    return out;
+  });
   const [percent, setPercent] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -55,6 +66,7 @@ export default function AddExpenseScreen({ route, navigation }: any) {
   const validate = (): string | null => {
     if (!title.trim()) return 'Give the expense a title';
     if (!amountMinor || amountMinor <= 0) return 'Enter an amount like 12.50';
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return 'Date should look like 2026-10-30';
     if (sharedBy.length === 0) return 'Pick at least one person sharing it';
     if (mode === 'EXACT' && exactSum !== amountMinor) {
       return `Exact shares add up to ${formatMoney(exactSum, currency)}, not ${formatMoney(amountMinor, currency)}`;
@@ -71,20 +83,22 @@ export default function AddExpenseScreen({ route, navigation }: any) {
     setBusy(true);
     setError(null);
     try {
-      await api(`/api/groups/${groupId}/expenses`, {
-        method: 'POST',
-        body: JSON.stringify({
-          title: title.trim(),
-          amountMinor,
-          date: new Date().toISOString().slice(0, 10),
-          paidBy,
-          requestId,
-          splitMode: mode,
-          sharedBy,
-          ...(mode === 'EXACT' ? { exactShares: exactMinor } : {}),
-          ...(mode === 'PERCENT' ? { percentShares: percentNum } : {}),
-        }),
+      const body = JSON.stringify({
+        title: title.trim(),
+        amountMinor,
+        date,
+        paidBy,
+        requestId,
+        splitMode: mode,
+        sharedBy,
+        ...(mode === 'EXACT' ? { exactShares: exactMinor } : {}),
+        ...(mode === 'PERCENT' ? { percentShares: percentNum } : {}),
       });
+      if (existing) {
+        await api(`/api/expenses/${existing.id}`, { method: 'PUT', body });
+      } else {
+        await api(`/api/groups/${groupId}/expenses`, { method: 'POST', body });
+      }
       navigation.goBack();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not save the expense');
@@ -118,10 +132,11 @@ export default function AddExpenseScreen({ route, navigation }: any) {
   return (
     <Screen>
       <ScrollView>
-        <BackHeader title="Add expense" />
+        <BackHeader title={existing ? 'Edit expense' : 'Add expense'} />
         {error ? <ErrorBox message={error} /> : null}
         <Field label="Title" value={title} onChange={setTitle} placeholder="Dinner at Bukhara" />
         <Field label={`Amount (${currency})`} value={amount} onChange={setAmount} placeholder="0.00" keyboardType="decimal-pad" />
+        <Field label="Date" value={date} onChange={setDate} placeholder="2026-10-30" />
 
         <Text style={{ color: colors.textMuted, fontWeight: '600', marginBottom: 6 }}>Paid by</Text>
         {chip(members.map((m) => m.userId), paidBy, setPaidBy, memberName)}
@@ -223,7 +238,7 @@ export default function AddExpenseScreen({ route, navigation }: any) {
           </View>
         ) : null}
 
-        <PrimaryButton title="Save expense" onPress={save} loading={busy} />
+        <PrimaryButton title={existing ? 'Save changes' : 'Save expense'} onPress={save} loading={busy} />
         <View style={{ height: 40 }} />
       </ScrollView>
     </Screen>
