@@ -1,6 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import { RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import { BackHeader } from '../components/BackHeader';
 import { api } from '../api';
 import { Card, CenteredLoading, ErrorBox, Screen, Title } from '../components/ui';
 import { useTheme } from '../theme';
@@ -45,7 +46,7 @@ export default function GroupDetailScreen({ route, navigation }: any) {
 
   return (
     <Screen>
-      <Title>{name}</Title>
+      <BackHeader title={name} />
       {error ? <ErrorBox message={error} /> : null}
       <ScrollView refreshControl={<RefreshControl refreshing={refreshing} onRefresh={async () => { setRefreshing(true); await load(); setRefreshing(false); }} />}>
         <Card>

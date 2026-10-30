@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { BackHeader } from '../components/BackHeader';
 import { api, newRequestId } from '../api';
 import { ErrorBox, Field, PrimaryButton, Screen, Title } from '../components/ui';
 import { useTheme } from '../theme';
@@ -117,7 +118,7 @@ export default function AddExpenseScreen({ route, navigation }: any) {
   return (
     <Screen>
       <ScrollView>
-        <Title>Add expense</Title>
+        <BackHeader title="Add expense" />
         {error ? <ErrorBox message={error} /> : null}
         <Field label="Title" value={title} onChange={setTitle} placeholder="Dinner at Bukhara" />
         <Field label={`Amount (${currency})`} value={amount} onChange={setAmount} placeholder="0.00" keyboardType="decimal-pad" />

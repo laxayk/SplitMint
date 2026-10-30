@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
+import { BackHeader } from '../components/BackHeader';
 import { api, newRequestId } from '../api';
 import { ErrorBox, Field, PrimaryButton, Screen, Title } from '../components/ui';
 import { useTheme } from '../theme';
@@ -57,7 +58,7 @@ export default function RecordPaymentScreen({ route, navigation }: any) {
 
   return (
     <Screen>
-      <Title>Record a payment</Title>
+      <BackHeader title="Record a payment" />
       {error ? <ErrorBox message={error} /> : null}
       {picker('From (who paid)', fromUser, setFromUser)}
       {picker('To (who received)', toUser, setToUser)}

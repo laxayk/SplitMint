@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { BackHeader } from '../components/BackHeader';
 import { api } from '../api';
 import { ErrorBox, Field, PrimaryButton, Screen, Title } from '../components/ui';
 
@@ -24,7 +25,7 @@ export default function NewGroupScreen({ navigation }: any) {
 
   return (
     <Screen>
-      <Title>New group</Title>
+      <BackHeader title="New group" />
       {error ? <ErrorBox message={error} /> : null}
       <Field label="Name" value={name} onChange={setName} placeholder="Goa trip" />
       <Field label="Currency (fixed for this group)" value={currency} onChange={setCurrency} placeholder="INR" />
