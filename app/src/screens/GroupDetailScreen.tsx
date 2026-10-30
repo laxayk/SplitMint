@@ -25,19 +25,24 @@ export default function GroupDetailScreen({ route, navigation }: any) {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [activity, setActivity] = useState<ActivityItem[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
+  const [formerMembers, setFormerMembers] = useState<Member[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [memberEmail, setMemberEmail] = useState('');
   const [memberMsg, setMemberMsg] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
-  const nameOf = (id: string) => members.find((m) => m.userId === id)?.displayName ?? id.slice(0, 6);
+  const nameOf = (id: string) =>
+    members.find((m) => m.userId === id)?.displayName
+    ?? formerMembers.find((m) => m.userId === id)?.displayName
+    ?? id.slice(0, 6);
 
   const load = async () => {
     try {
       setError(null);
       setMe(await loadUserId());
-      const group = await api<{ members: Member[] }>(`/api/groups/${groupId}`);
+      const group = await api<{ members: Member[]; formerMembers: Member[] }>(`/api/groups/${groupId}`);
       setMembers(group.members);
+      setFormerMembers(group.formerMembers ?? []);
       setBalances(await api<Balance[]>(`/api/groups/${groupId}/balances`));
       setTransfers(await api<Transfer[]>(`/api/groups/${groupId}/settlements/suggestions`));
       setPayments(await api<Payment[]>(`/api/groups/${groupId}/payments`));

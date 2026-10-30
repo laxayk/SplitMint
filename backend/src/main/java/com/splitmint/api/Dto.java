@@ -21,7 +21,7 @@ public final class Dto {
     public record CreateGroupRequest(@NotBlank @Size(max = 120) String name,
                                      @NotBlank @Pattern(regexp = "[A-Za-z]{3}") String currency) {}
 
-    public record GroupResponse(UUID id, String name, String currency, UUID createdBy, List<MemberView> members) {}
+    public record GroupResponse(UUID id, String name, String currency, UUID createdBy, List<MemberView> members, List<MemberView> formerMembers) {}
 
     public record MemberView(UUID userId, String email, String displayName) {}
 

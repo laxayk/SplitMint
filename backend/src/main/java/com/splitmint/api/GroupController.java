@@ -31,7 +31,7 @@ public class GroupController {
         UUID me = CurrentUser.id();
         ExpenseGroup g = groupService.createGroup(req.name(), req.currency(), me);
         return new Dto.GroupResponse(g.getId(), g.getName(), g.getCurrency(), g.getCreatedBy(),
-                groupService.memberViews(g.getId()));
+                groupService.memberViews(g.getId()), groupService.formerMemberViews(g.getId()));
     }
 
     @GetMapping
@@ -41,7 +41,7 @@ public class GroupController {
         for (var m : members.findByUserId(me)) {
             var g = groupService.requireMembership(m.getGroupId(), me);
             out.add(new Dto.GroupResponse(g.getId(), g.getName(), g.getCurrency(), g.getCreatedBy(),
-                    groupService.memberViews(g.getId())));
+                    groupService.memberViews(g.getId()), groupService.formerMemberViews(g.getId())));
         }
         out.sort(Comparator.comparing(Dto.GroupResponse::name));
         return out;
@@ -52,7 +52,7 @@ public class GroupController {
         UUID me = CurrentUser.id();
         var g = groupService.requireMembership(groupId, me);
         return new Dto.GroupResponse(g.getId(), g.getName(), g.getCurrency(), g.getCreatedBy(),
-                groupService.memberViews(groupId));
+                groupService.memberViews(groupId), groupService.formerMemberViews(groupId));
     }
 
     @PostMapping("/{groupId}/members")
@@ -62,7 +62,7 @@ public class GroupController {
         groupService.addMember(groupId, me, req.email());
         var g = groupService.requireMembership(groupId, me);
         return new Dto.GroupResponse(g.getId(), g.getName(), g.getCurrency(), g.getCreatedBy(),
-                groupService.memberViews(groupId));
+                groupService.memberViews(groupId), groupService.formerMemberViews(groupId));
     }
 
     @PostMapping("/{groupId}/leave")

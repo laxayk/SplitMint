@@ -82,6 +82,29 @@ public class GroupService {
         return out;
     }
 
+    /** Users no longer in the group who still appear in its ledger (expenses, shares, payments). */
+    public List<Dto.MemberView> formerMemberViews(UUID groupId) {
+        Set<UUID> current = new HashSet<>();
+        for (GroupMember m : members.findByGroupId(groupId)) current.add(m.getUserId());
+        Set<UUID> historical = new HashSet<>();
+        for (var e : expenses.findByGroupIdOrderByCreatedAtDesc(groupId)) {
+            historical.add(e.getPaidBy());
+            for (var sh : shares.findByExpenseId(e.getId())) historical.add(sh.getUserId());
+        }
+        for (var pm : payments.findByGroupIdOrderByCreatedAtDesc(groupId)) {
+            historical.add(pm.getFromUser());
+            historical.add(pm.getToUser());
+        }
+        historical.removeAll(current);
+        List<Dto.MemberView> out = new ArrayList<>();
+        for (UUID id : historical) {
+            users.findById(id).ifPresent(u ->
+                    out.add(new Dto.MemberView(u.getId(), u.getEmail(), u.getDisplayName())));
+        }
+        out.sort(Comparator.comparing(Dto.MemberView::displayName));
+        return out;
+    }
+
     @Transactional
     public Expense createExpense(UUID groupId, UUID actorId, Dto.ExpenseRequest req, Map<UUID, Long> split) {
         // Idempotency: a retried request id returns the already-saved expense.
