@@ -3,6 +3,7 @@ import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { StatusBar } from 'expo-status-bar';
+import { Text } from 'react-native';
 import { loadToken } from './src/api';
 import { ThemeProvider, useTheme } from './src/theme';
 import { CenteredLoading, Screen } from './src/components/ui';
@@ -14,12 +15,22 @@ import AddExpenseScreen from './src/screens/AddExpenseScreen';
 import RecordPaymentScreen from './src/screens/RecordPaymentScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
 
+function TabIcon({ name, color }: { name: string; color: string }) {
+  const icons: Record<string, string> = { Groups: '\u2261', Settings: '\u2699' };
+  return <Text style={{ fontSize: 18, color }}>{icons[name] ?? '\u25CF'}</Text>;
+}
+
 const Stack = createNativeStackNavigator();
 const Tabs = createBottomTabNavigator();
 
 function MainTabs({ onSignedOut }: { onSignedOut: () => void }) {
   return (
-    <Tabs.Navigator screenOptions={{ headerShown: false }}>
+    <Tabs.Navigator
+      screenOptions={({ route }) => ({
+        headerShown: false,
+        tabBarIcon: ({ color }) => <TabIcon name={route.name} color={color} />,
+      })}
+    >
       <Tabs.Screen name="Groups" component={GroupsScreen} />
       <Tabs.Screen name="Settings">
         {() => <SettingsScreen onSignedOut={onSignedOut} />}
