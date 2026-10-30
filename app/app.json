@@ -1,0 +1,15 @@
+{
+  "expo": {
+    "name": "SplitMint",
+    "slug": "splitmint",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "scheme": "splitmint",
+    "ios": { "supportsTablet": true },
+    "android": {},
+    "extra": {
+      "apiUrl": "http://localhost:8080"
+    }
+  }
+}
