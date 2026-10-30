@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { api, newRequestId } from '../api';
 import { ErrorBox, Field, PrimaryButton, Screen, Title } from '../components/ui';
 import { useTheme } from '../theme';
@@ -22,24 +22,51 @@ export default function AddExpenseScreen({ route, navigation }: any) {
   const [paidBy, setPaidBy] = useState(members[0]?.userId ?? '');
   const [sharedBy, setSharedBy] = useState<string[]>(members.map((m) => m.userId));
   const [mode, setMode] = useState<SplitMode>('EQUAL');
+  const [exact, setExact] = useState<Record<string, string>>({});
+  const [percent, setPercent] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   // One id per screen visit: a retry or double tap saves once on the server.
   const [requestId] = useState(newRequestId());
 
   const amountMinor = parseMoney(amount);
-  const preview = useMemo(
-    () => (amountMinor ? splitPreview(mode, amountMinor, sharedBy) : null),
-    [amountMinor, mode, sharedBy],
-  );
+  const exactMinor: Record<string, number> = {};
+  for (const [k, v] of Object.entries(exact)) {
+    const p = parseMoney(v);
+    if (p !== null) exactMinor[k] = p;
+  }
+  const percentNum: Record<string, number> = {};
+  for (const [k, v] of Object.entries(percent)) {
+    const p = Number(v);
+    if (v.trim() !== '' && Number.isFinite(p)) percentNum[k] = p;
+  }
 
-  const toggleShare = (id: string) =>
-    setSharedBy((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]));
+  const preview = useMemo(() => {
+    if (!amountMinor || sharedBy.length === 0) return null;
+    if (mode === 'EXACT') return splitPreview('EXACT', amountMinor, sharedBy, exactMinor);
+    if (mode === 'PERCENT') return splitPreview('PERCENT', amountMinor, sharedBy, undefined, percentNum);
+    return splitPreview('EQUAL', amountMinor, sharedBy);
+  }, [amountMinor, mode, sharedBy, exact, percent]);
+
+  const exactSum = sharedBy.reduce((s, id) => s + (exactMinor[id] ?? 0), 0);
+  const percentSum = sharedBy.reduce((s, id) => s + (percentNum[id] ?? 0), 0);
+
+  const validate = (): string | null => {
+    if (!title.trim()) return 'Give the expense a title';
+    if (!amountMinor || amountMinor <= 0) return 'Enter an amount like 12.50';
+    if (sharedBy.length === 0) return 'Pick at least one person sharing it';
+    if (mode === 'EXACT' && exactSum !== amountMinor) {
+      return `Exact shares add up to ${formatMoney(exactSum, currency)}, not ${formatMoney(amountMinor, currency)}`;
+    }
+    if (mode === 'PERCENT' && Math.abs(percentSum - 100) > 0.0001) {
+      return `Percentages add up to ${percentSum}%, not 100%`;
+    }
+    return null;
+  };
 
   const save = async () => {
-    if (!title.trim()) return setError('Give the expense a title');
-    if (!amountMinor || amountMinor <= 0) return setError('Enter an amount like 12.50');
-    if (sharedBy.length === 0) return setError('Pick at least one person sharing it');
+    const problem = validate();
+    if (problem) return setError(problem);
     setBusy(true);
     setError(null);
     try {
@@ -53,7 +80,8 @@ export default function AddExpenseScreen({ route, navigation }: any) {
           requestId,
           splitMode: mode,
           sharedBy,
-          // Exact and percent entry live in the edit flow; MVP posts equal splits.
+          ...(mode === 'EXACT' ? { exactShares: exactMinor } : {}),
+          ...(mode === 'PERCENT' ? { percentShares: percentNum } : {}),
         }),
       });
       navigation.goBack();
@@ -64,6 +92,28 @@ export default function AddExpenseScreen({ route, navigation }: any) {
     }
   };
 
+  const toggleShare = (id: string) =>
+    setSharedBy((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]));
+
+  const chip = (list: string[], current: string, onPick: (v: string) => void, label: (id: string) => string) => (
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+      {list.map((id) => (
+        <TouchableOpacity
+          key={id}
+          onPress={() => onPick(id)}
+          style={{
+            paddingHorizontal: 14, paddingVertical: 8, borderRadius: 18,
+            backgroundColor: current === id ? colors.accent : colors.surfaceAlt,
+          }}
+        >
+          <Text style={{ color: current === id ? colors.accentText : colors.text }}>{label(id)}</Text>
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
+
+  const memberName = (id: string) => members.find((m) => m.userId === id)?.displayName ?? '?';
+
   return (
     <Screen>
       <ScrollView>
@@ -73,20 +123,7 @@ export default function AddExpenseScreen({ route, navigation }: any) {
         <Field label={`Amount (${currency})`} value={amount} onChange={setAmount} placeholder="0.00" keyboardType="decimal-pad" />
 
         <Text style={{ color: colors.textMuted, fontWeight: '600', marginBottom: 6 }}>Paid by</Text>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
-          {members.map((m) => (
-            <TouchableOpacity
-              key={m.userId}
-              onPress={() => setPaidBy(m.userId)}
-              style={{
-                paddingHorizontal: 14, paddingVertical: 8, borderRadius: 18,
-                backgroundColor: paidBy === m.userId ? colors.accent : colors.surfaceAlt,
-              }}
-            >
-              <Text style={{ color: paidBy === m.userId ? colors.accentText : colors.text }}>{m.displayName}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+        {chip(members.map((m) => m.userId), paidBy, setPaidBy, memberName)}
 
         <Text style={{ color: colors.textMuted, fontWeight: '600', marginBottom: 6 }}>Shared by</Text>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
@@ -124,12 +161,61 @@ export default function AddExpenseScreen({ route, navigation }: any) {
           ))}
         </View>
 
+        {mode === 'EXACT' ? (
+          <View style={{ marginBottom: 12 }}>
+            {sharedBy.map((id) => (
+              <View key={id} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 12 }}>
+                <Text style={{ flex: 1, color: colors.text }}>{memberName(id)}</Text>
+                <TextInput
+                  style={{
+                    width: 110, borderWidth: 1, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 8,
+                    backgroundColor: colors.surface, borderColor: colors.border, color: colors.text,
+                  }}
+                  value={exact[id] ?? ''}
+                  onChangeText={(v) => setExact((cur) => ({ ...cur, [id]: v }))}
+                  placeholder="0.00"
+                  placeholderTextColor={colors.textMuted}
+                  keyboardType="decimal-pad"
+                />
+              </View>
+            ))}
+            <Text style={{ color: exactSum === amountMinor ? colors.positive : colors.textMuted }}>
+              Shares: {formatMoney(exactSum, currency)} of {formatMoney(amountMinor ?? 0, currency)}
+            </Text>
+          </View>
+        ) : null}
+
+        {mode === 'PERCENT' ? (
+          <View style={{ marginBottom: 12 }}>
+            {sharedBy.map((id) => (
+              <View key={id} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 12 }}>
+                <Text style={{ flex: 1, color: colors.text }}>{memberName(id)}</Text>
+                <TextInput
+                  style={{
+                    width: 90, borderWidth: 1, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 8,
+                    backgroundColor: colors.surface, borderColor: colors.border, color: colors.text,
+                  }}
+                  value={percent[id] ?? ''}
+                  onChangeText={(v) => setPercent((cur) => ({ ...cur, [id]: v }))}
+                  placeholder="0"
+                  placeholderTextColor={colors.textMuted}
+                  keyboardType="decimal-pad"
+                />
+                <Text style={{ color: colors.textMuted }}>%</Text>
+              </View>
+            ))}
+            <Text style={{ color: Math.abs(percentSum - 100) < 0.0001 ? colors.positive : colors.textMuted }}>
+              Total: {percentSum}% of 100%
+            </Text>
+          </View>
+        ) : null}
+
         {mode === 'EQUAL' && preview ? (
           <View style={{ marginBottom: 12 }}>
             <Text style={{ color: colors.textMuted, fontWeight: '600', marginBottom: 6 }}>Preview (server confirms on save)</Text>
             {sharedBy.map((id) => (
               <View key={id} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 2 }}>
-                <Text style={{ color: colors.text }}>{members.find((m) => m.userId === id)?.displayName}</Text>
+                <Text style={{ color: colors.text }}>{memberName(id)}</Text>
                 <Text style={{ color: colors.textMuted }}>{formatMoney(preview[id] ?? 0, currency)}</Text>
               </View>
             ))}

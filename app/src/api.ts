@@ -1,5 +1,22 @@
 import Constants from 'expo-constants';
+import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
+
+// Expo Secure Store has no web implementation; localStorage is the web fallback
+// (web is used for previews and tests, not the shipped app).
+const store = {
+  async get(k: string) {
+    return Platform.OS === 'web' ? window.localStorage.getItem(k) : SecureStore.getItemAsync(k);
+  },
+  async set(k: string, v: string) {
+    if (Platform.OS === 'web') window.localStorage.setItem(k, v);
+    else await SecureStore.setItemAsync(k, v);
+  },
+  async del(k: string) {
+    if (Platform.OS === 'web') window.localStorage.removeItem(k);
+    else await SecureStore.deleteItemAsync(k);
+  },
+};
 
 const API_URL: string =
   process.env.EXPO_PUBLIC_API_URL ??
@@ -9,15 +26,15 @@ const API_URL: string =
 const TOKEN_KEY = 'splitmint.jwt';
 
 export async function saveToken(token: string) {
-  await SecureStore.setItemAsync(TOKEN_KEY, token);
+  await store.set(TOKEN_KEY, token);
 }
 
 export async function loadToken(): Promise<string | null> {
-  return SecureStore.getItemAsync(TOKEN_KEY);
+  return store.get(TOKEN_KEY);
 }
 
 export async function clearToken() {
-  await SecureStore.deleteItemAsync(TOKEN_KEY);
+  await store.del(TOKEN_KEY);
 }
 
 export class ApiError extends Error {
