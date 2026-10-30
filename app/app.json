@@ -6,10 +6,15 @@
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "scheme": "splitmint",
-    "ios": { "supportsTablet": true },
+    "ios": {
+      "supportsTablet": true
+    },
     "android": {},
     "extra": {
       "apiUrl": "http://localhost:8080"
-    }
+    },
+    "plugins": [
+      "expo-asset"
+    ]
   }
 }
